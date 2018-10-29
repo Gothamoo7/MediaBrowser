@@ -106,6 +106,14 @@ public protocol MediaBrowserDelegate: class {
      Optional protocol for access token
      */
     func accessToken(for url: URL?) -> String?
+    
+    func mediaGrid(shown: Bool)
+    
+    func gridWill(show: Bool)
+    
+    func willHaveNavbar() -> Bool
+    
+    func customToolbar() -> UIView?
 }
 
 public extension MediaBrowserDelegate {
@@ -130,4 +138,14 @@ public extension MediaBrowserDelegate {
     func gridCellSize() -> CGSize? { return nil }
 
     func accessToken(for url: URL?) -> String? { return nil }
+    
+    func mediaGrid(shown: Bool) {}
+    
+    func gridWill(show: Bool) {}
+    
+    func willHaveNavbar() -> Bool {
+        return false
+    }
+    
+    func customToolbar() -> UIView? { return nil }
 }

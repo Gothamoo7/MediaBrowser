@@ -13,6 +13,8 @@ class MediaGridViewController: UICollectionViewController, UICollectionViewDeleg
     var selectionMode = false
     var initialContentOffset = CGPoint(x: 0.0, y: CGFloat.greatestFiniteMagnitude)
     
+    var gridBackgroundColor = UIColor.black
+    
     init() {
         super.init(collectionViewLayout: UICollectionViewFlowLayout())
     }
@@ -29,7 +31,7 @@ class MediaGridViewController: UICollectionViewController, UICollectionViewDeleg
         if let cv = collectionView {
             cv.register(MediaGridCell.self, forCellWithReuseIdentifier: "MediaGridCell")
             cv.alwaysBounceVertical = true
-            cv.backgroundColor = UIColor.black
+            cv.backgroundColor = gridBackgroundColor
         }
     }
     
@@ -90,7 +92,7 @@ class MediaGridViewController: UICollectionViewController, UICollectionViewDeleg
         return floorcgf(x: view.bounds.width / 93.0)
     }
     
-    var margin = CGFloat(1.0)
+    var margin = CGFloat(0.0)
     var gutter = CGFloat(1.0)
     
     

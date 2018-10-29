@@ -211,6 +211,12 @@ open class MediaBrowser: UIViewController, UIScrollViewDelegate, UIActionSheetDe
     /// Caching image count both side (e.g. when index 1, caching 0 and 2)
     public var cachingImageCount = 1
     
+    public var gridBackgroundColor = UIColor.black
+    
+    public var isGridShowing = false
+    
+    public var displayCloseButton = true
+    
     /// Caching before MediaBrowser comes up, set
     public var preCachingEnabled = false {
         didSet {
@@ -567,10 +573,15 @@ open class MediaBrowser: UIViewController, UIScrollViewDelegate, UIActionSheetDe
             }
         }
         
+        let customToolbar = delegate?.customToolbar()
         if hideToolbar {
             toolbar.removeFromSuperview()
+            customToolbar?.removeFromSuperview()
         } else {
             view.addSubview(toolbar)
+            if let cToolbar = customToolbar {
+                view.addSubview(cToolbar)
+            }
         }
         
         // Update nav
@@ -814,6 +825,9 @@ open class MediaBrowser: UIViewController, UIScrollViewDelegate, UIActionSheetDe
         
         // Toolbar
         toolbar.frame = frameForToolbar
+        if let cToolbar = delegate?.customToolbar() {
+            cToolbar.frame = frameForToolbar
+        }
         
         // Remember index
         let indexPriorToLayout = currentPageIndex
@@ -1245,6 +1259,18 @@ open class MediaBrowser: UIViewController, UIScrollViewDelegate, UIActionSheetDe
                     selectedButton.isSelected = photoIsSelectedAtIndex(index: index)
                 }
             }
+            
+            if self.displayCloseButton {
+                let closeButton = UIButton(type: .custom)
+                closeButton.setImage(
+                    UIImage(named: "CloseIcon", in: Bundle(for: MediaBrowser.self),
+                            compatibleWith: nil), for: .normal)
+                
+                closeButton.addTarget(self, action: #selector(showGrid), for: .touchUpInside)
+                closeButton.sizeToFit()
+                closeButton.frame = frameForSelectedButton(selectedButton: closeButton, atIndex: index, isLeftAligned: true)
+                pagingScrollView.addSubview(closeButton)
+            }
         }
     }
 
@@ -1454,10 +1480,10 @@ open class MediaBrowser: UIViewController, UIScrollViewDelegate, UIActionSheetDe
         return CGRect.zero
     }
 
-    func frameForSelectedButton(selectedButton: UIButton, atIndex index: Int) -> CGRect {
+    func frameForSelectedButton(selectedButton: UIButton, atIndex index: Int, isLeftAligned: Bool = false) -> CGRect {
         let pageFrame = frameForPageAtIndex(index: index)
         let padding = CGFloat(20.0)
-        var yOffset = CGFloat(0.0)
+        var yOffset = UIApplication.shared.statusBarFrame.height + 1
         
         if !areControlsHidden {
             if let navBar = navigationController?.navigationBar {
@@ -1465,12 +1491,14 @@ open class MediaBrowser: UIViewController, UIScrollViewDelegate, UIActionSheetDe
             }
         }
         
+        let x = isLeftAligned ? pageFrame.origin.x + padding : pageFrame.origin.x + pageFrame.size.width - selectedButton.frame.size.width - padding
+        
         let selectedButtonFrame = CGRect(
-            x: pageFrame.origin.x + pageFrame.size.width - selectedButton.frame.size.width - padding,
+            x: x,
             y: padding + yOffset,
             width: selectedButton.frame.size.width,
             height: selectedButton.frame.size.height)
-        
+
         return selectedButtonFrame.integral
     }
 
@@ -1804,11 +1832,15 @@ open class MediaBrowser: UIViewController, UIScrollViewDelegate, UIActionSheetDe
     @objc func showGridAnimated() {
         showGrid(animated: true)
     }
+    
+    public var embbededIn: UIViewController? = nil
 
-    func showGrid(animated: Bool) {
+    @objc func showGrid(animated: Bool) {
         if gridController != nil {
             return
         }
+        
+        delegate?.gridWill(show: true)
         
         // Init grid controller
         gridController = MediaGridViewController()
@@ -1816,10 +1848,19 @@ open class MediaBrowser: UIViewController, UIScrollViewDelegate, UIActionSheetDe
         if let gc = gridController {
             let bounds = view.bounds
             
+            gc.gridBackgroundColor = gridBackgroundColor
             gc.initialContentOffset = currentGridContentOffset
             gc.browser = self
             gc.selectionMode = displaySelectionButtons
-            gc.view.frame = CGRect(x: 0, y: 0, width: bounds.width, height: bounds.height)
+            
+            var y: CGFloat = 0
+            
+            if self.embbededIn != nil && delegate?.willHaveNavbar() == true {
+                y = embbededIn?.navigationController?.navigationBar.frame.height ?? 0
+                y += UIApplication.shared.statusBarFrame.height + 1 //1px delta
+            }
+
+            gc.view.frame = CGRect(x: 0, y: y, width: bounds.width, height: bounds.height - y)
             gc.view.alpha = 0.0
             
             // Stop specific layout being triggered
@@ -1855,6 +1896,8 @@ open class MediaBrowser: UIViewController, UIScrollViewDelegate, UIActionSheetDe
 
             let completion: (Bool) -> Void = { _ in
                 gc.didMove(toParent: self)
+                self.isGridShowing = true
+                self.delegate?.mediaGrid(shown: true)
             }
 
             if disableGridAnimations {
@@ -1869,8 +1912,9 @@ open class MediaBrowser: UIViewController, UIScrollViewDelegate, UIActionSheetDe
         }
     }
 
-    func hideGrid() {
+    @objc func hideGrid() {
         if let gc = gridController {
+            delegate?.gridWill(show: false)
             // Remember previous content offset
             currentGridContentOffset = gc.collectionView!.contentOffset
             
@@ -1906,6 +1950,8 @@ open class MediaBrowser: UIViewController, UIScrollViewDelegate, UIActionSheetDe
                 gc.view.removeFromSuperview()
                 gc.removeFromParent()
 
+                self.isGridShowing = false
+                self.delegate?.mediaGrid(shown: false)
                 self.setControlsHidden(hidden: false, animated: true, permanent: false) // retrigger timer
             }
 
