@@ -217,6 +217,8 @@ open class MediaBrowser: UIViewController, UIScrollViewDelegate, UIActionSheetDe
     
     public var displayCloseButton = true
     
+    public var pullToRefresh = true
+    
     /// Caching before MediaBrowser comes up, set
     public var preCachingEnabled = false {
         didSet {
@@ -373,7 +375,7 @@ open class MediaBrowser: UIViewController, UIScrollViewDelegate, UIActionSheetDe
         pagingScrollView.backgroundColor = UIColor.black
         pagingScrollView.contentSize = contentSizeForPagingScrollView()
         view.addSubview(pagingScrollView)
-        
+
         // Toolbar
         toolbar = UIToolbar(frame: frameForToolbar)
         toolbar.tintColor = toolbarTextColor
@@ -426,6 +428,16 @@ open class MediaBrowser: UIViewController, UIScrollViewDelegate, UIActionSheetDe
         }
         
         super.viewDidLoad()
+    }
+    
+    func refresh() {
+        func callback(isSuccess: Bool) {
+            if let gc = self.gridController {
+                gc.endReload()
+                self.reloadData()
+            }
+        }
+        delegate?.reloadData(callback)
     }
     
     /**
@@ -1873,6 +1885,10 @@ open class MediaBrowser: UIViewController, UIScrollViewDelegate, UIActionSheetDe
             // Perform any adjustments
             gc.view.layoutIfNeeded()
             gc.adjustOffsetsAsRequired()
+            
+            if(pullToRefresh) {
+                gc.addRefreshControl()
+            }
         
             // Hide action button on nav bar if it exists
             if navigationItem.rightBarButtonItem == actionButton {

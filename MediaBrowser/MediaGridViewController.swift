@@ -95,6 +95,41 @@ class MediaGridViewController: UICollectionViewController, UICollectionViewDeleg
     var margin = CGFloat(0.0)
     var gutter = CGFloat(1.0)
     
+    private var reloading = false
+    
+    private var refreshControl: UIRefreshControl? = nil
+    
+    func addRefreshControl() {
+        refreshControl = UIRefreshControl()
+        
+        if #available(iOS 10.0, *) {
+            collectionView.refreshControl = refreshControl
+        } else {
+            collectionView.addSubview(refreshControl!)
+        }
+
+        refreshControl?.addTarget(
+            self,
+            action: #selector(refreshData(_:)),
+            for: .valueChanged
+        )
+    }
+
+    @objc private func refreshData(_ sender: Any) {
+        self.beginReload()
+    }
+
+    func beginReload() {
+        reloading = true
+        collectionView.reloadData()
+        browser?.refresh()
+    }
+
+    func endReload() {
+        reloading = false
+        refreshControl?.endRefreshing()
+        collectionView.reloadData()
+    }
     
     override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
         coordinator.animate(alongsideTransition: nil) { _ in

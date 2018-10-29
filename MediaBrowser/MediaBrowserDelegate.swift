@@ -114,6 +114,8 @@ public protocol MediaBrowserDelegate: class {
     func willHaveNavbar() -> Bool
     
     func customToolbar() -> UIView?
+    
+    func reloadData(_ onComplete: @escaping (Bool) -> ())
 }
 
 public extension MediaBrowserDelegate {
@@ -148,4 +150,6 @@ public extension MediaBrowserDelegate {
     }
     
     func customToolbar() -> UIView? { return nil }
+    
+    func reloadData(_ onComplete: @escaping (Bool) -> ()) {}
 }
