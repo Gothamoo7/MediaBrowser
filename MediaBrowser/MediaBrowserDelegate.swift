@@ -115,6 +115,8 @@ public protocol MediaBrowserDelegate: class {
     
     func customToolbar() -> UIView?
     
+    func customeToolbarHeight() -> CGFloat?
+    
     func reloadData(_ onComplete: @escaping (Bool) -> ())
 }
 
@@ -150,6 +152,8 @@ public extension MediaBrowserDelegate {
     }
     
     func customToolbar() -> UIView? { return nil }
+    
+    func customeToolbarHeight() -> CGFloat? { return nil }
     
     func reloadData(_ onComplete: @escaping (Bool) -> ()) {}
 }

@@ -587,12 +587,16 @@ open class MediaBrowser: UIViewController, UIScrollViewDelegate, UIActionSheetDe
         
         let customToolbar = delegate?.customToolbar()
         if hideToolbar {
-            toolbar.removeFromSuperview()
-            customToolbar?.removeFromSuperview()
+            if let cToolbar = customToolbar {
+                cToolbar.removeFromSuperview()
+            } else {
+                toolbar.removeFromSuperview()
+            }
         } else {
-            view.addSubview(toolbar)
             if let cToolbar = customToolbar {
                 view.addSubview(cToolbar)
+            } else {
+                view.addSubview(toolbar)
             }
         }
         
@@ -836,11 +840,17 @@ open class MediaBrowser: UIViewController, UIScrollViewDelegate, UIActionSheetDe
         performingLayout = true
         
         // Toolbar
-        toolbar.frame = frameForToolbar
         if let cToolbar = delegate?.customToolbar() {
-            cToolbar.frame = frameForToolbar
+            var cframe = getToolbarRect(isForCustomToolbar: true)
+            if let height = delegate?.customeToolbarHeight() {
+                cframe.size.height = height
+            }
+            
+            cToolbar.frame = cframe
+        } else {
+            toolbar.frame = frameForToolbar
         }
-        
+
         // Remember index
         let indexPriorToLayout = currentPageIndex
         
@@ -1458,22 +1468,32 @@ open class MediaBrowser: UIViewController, UIScrollViewDelegate, UIActionSheetDe
         return CGPoint(x: newOffset, y: 0)
     }
 
-    var frameForToolbar: CGRect {
-        var height = CGFloat(44.0)
+    func getToolbarRect(isForCustomToolbar: Bool = false) -> CGRect {
+        var height: CGFloat = 0
+        
+        if(isForCustomToolbar && delegate?.customeToolbarHeight() != nil) {
+            height = (delegate?.customeToolbarHeight())!
+        } else {
+            height = 44.0
 
-        if view.bounds.height < 768.0 && view.bounds.height < view.bounds.width {
-            height = 32.0
+            if view.bounds.height < 768.0 && view.bounds.height < view.bounds.width {
+                height = 32.0
+            }
         }
-
+        
         var safeAreaBottomInset = CGFloat(0)
         if #available(iOS 11, *) {
             safeAreaBottomInset = view.safeAreaInsets.bottom
         }
-
+        
         let y = view.bounds.size.height - height - safeAreaBottomInset
         let width = view.bounds.size.width
-
+        
         return CGRect(x: 0.0, y: y, width: width, height: height).integral
+    }
+    
+    var frameForToolbar: CGRect {
+        return getToolbarRect()
     }
 
     func frameForCaptionView(captionView: MediaCaptionView?, index: Int) -> CGRect {
@@ -1864,7 +1884,7 @@ open class MediaBrowser: UIViewController, UIScrollViewDelegate, UIActionSheetDe
             gc.initialContentOffset = currentGridContentOffset
             gc.browser = self
             gc.selectionMode = displaySelectionButtons
-            
+
             var y: CGFloat = 0
             
             if self.embbededIn != nil && delegate?.willHaveNavbar() == true {
@@ -2048,10 +2068,9 @@ open class MediaBrowser: UIViewController, UIScrollViewDelegate, UIActionSheetDe
         }
 
         UIView.animate(withDuration: animationDuration, animations: {
-
             // Toolbar
             self.toolbar.frame = self.frameForToolbar
-            
+
             if hidden {
                 self.toolbar.frame = self.toolbar.frame.offsetBy(dx: 0, dy: animatonOffset)
             }
