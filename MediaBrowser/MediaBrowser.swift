@@ -1867,7 +1867,7 @@ open class MediaBrowser: UIViewController, UIScrollViewDelegate, UIActionSheetDe
     
     public var embbededIn: UIViewController? = nil
 
-    @objc func showGrid(animated: Bool) {
+    @objc public func showGrid(animated: Bool) {
         if gridController != nil {
             return
         }
@@ -1948,7 +1948,7 @@ open class MediaBrowser: UIViewController, UIScrollViewDelegate, UIActionSheetDe
         }
     }
 
-    @objc func hideGrid() {
+    @objc public func hideGrid() {
         if let gc = gridController {
             delegate?.gridWill(show: false)
             // Remember previous content offset
