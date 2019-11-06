@@ -306,7 +306,7 @@ open class MediaBrowser: UIViewController, UIScrollViewDelegate, UIActionSheetDe
         pagingScrollView.delegate = nil
         NotificationCenter.default.removeObserver(self)
         releaseAllUnderlyingPhotos(preserveCurrent: false)
-        SDImageCache.shared().clearMemory() // clear memory
+        SDImageCache.shared.clearMemory() // clear memory
     }
 
     private func releaseAllUnderlyingPhotos(preserveCurrent: Bool) {
@@ -1498,11 +1498,15 @@ open class MediaBrowser: UIViewController, UIScrollViewDelegate, UIActionSheetDe
 
     func frameForCaptionView(captionView: MediaCaptionView?, index: Int) -> CGRect {
         if let cw = captionView {
+            var safeAreaBottom: CGFloat = 0
+            if #available(iOS 11.0, *) {
+                safeAreaBottom = view.safeAreaInsets.bottom
+            }
             let pageFrame = frameForPageAtIndex(index: index)
             let captionSize = cw.sizeThatFits(CGSize(width: pageFrame.size.width, height: 0.0))
             let captionFrame = CGRect(
                 x: pageFrame.origin.x,
-                y: pageFrame.size.height - captionSize.height - (toolbar.superview != nil ? toolbar.frame.size.height : 0.0),
+                y: pageFrame.size.height - captionSize.height - (toolbar.superview != nil ? toolbar.frame.size.height : 0.0) - safeAreaBottom,
                 width: pageFrame.size.width,
                 height: captionSize.height)
             
@@ -1824,7 +1828,7 @@ open class MediaBrowser: UIViewController, UIScrollViewDelegate, UIActionSheetDe
 //            }
         }
         
-        dismiss(animated: true, completion: nil)
+//        dismiss(animated: true, completion: nil)
     }
 
     func clearCurrentVideo() {
@@ -2231,12 +2235,25 @@ open class MediaBrowser: UIViewController, UIScrollViewDelegate, UIActionSheetDe
         if let photo = mediaAtIndex(index: index) {
             if numberOfMedias > 0 && photo.underlyingImage != nil {
                 // Show activity view controller
-                var items: [Any] = [Any]()
+                var items: [Any] = []
                 if let image = photo.underlyingImage {
-                    items.append(image)
-                }
-                if photo.caption != "" {
-                    items.append(photo.caption)
+                    if !photo.isVideo {
+                        var fileName = photo.caption
+
+                        if fileName == "" {
+                            fileName = "Image.jpg"
+                        } else {
+                            fileName =  "\((fileName as NSString).deletingPathExtension).jpg"
+                        }
+
+                        if let compressedImage = image.jpegData(compressionQuality: 0.8) {
+                            let imageUrl = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(fileName)
+                            do {
+                                try compressedImage.write(to: imageUrl, options: .atomic)
+                                items.append(imageUrl)
+                            } catch { }
+                        }
+                    }
                 }
                 activityViewController = UIActivityViewController(activityItems: items, applicationActivities: nil)
 
@@ -2245,6 +2262,13 @@ open class MediaBrowser: UIViewController, UIScrollViewDelegate, UIActionSheetDe
                     vc.completionWithItemsHandler = { [weak self] (activityType, completed, returnedItems, activityError) in
                         guard let wself = self else { return }
 
+                        for item in items {
+                            if let fileUrl = item as? URL {
+                                do {
+                                    try FileManager.default.removeItem(at: fileUrl)
+                                } catch { }
+                            }
+                        }
                         wself.activityViewController = nil
                         wself.hideControlsAfterDelay()
                     }
